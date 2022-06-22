@@ -7,10 +7,7 @@ import com.example.mas_gui.service.PackService;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.dialog.Dialog;
 import com.vaadin.flow.component.grid.Grid;
-import com.vaadin.flow.component.html.H1;
-import com.vaadin.flow.component.html.H3;
-import com.vaadin.flow.component.html.Label;
-import com.vaadin.flow.component.html.Span;
+import com.vaadin.flow.component.html.*;
 import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.data.renderer.ComponentRenderer;
 import com.vaadin.flow.function.SerializableBiConsumer;
@@ -25,7 +22,7 @@ import java.util.Optional;
 
 @Route("packs/:senderId")
 @PageTitle("Packs list")
-public class PackListView extends VerticalLayout implements BeforeEnterObserver {
+public class PackListView extends Div implements BeforeEnterObserver {
     PackService packService;
     SenderService senderService;
     private Integer senderId;
@@ -53,31 +50,57 @@ public class PackListView extends VerticalLayout implements BeforeEnterObserver 
 
         var strPackDescription = "The packs of the sender: "+client.getEmail()+" ,"+client.getPhoneNumber();
         Label lblPackDescription = new Label(strPackDescription);
-
-        add(
+        var layout = new VerticalLayout(
                 h1PackList,
                 h3PackChoose,
                 lblPackDescription,
                 grdMain,
                 btnReturn
         );
+        add(
+            layout
+        );
     }
     private Sender getClient() throws ItemNotFoundException {
         var individualClient = senderService.getSenderById((long)senderId);
         return individualClient;
     }
-    private Grid createGrid(){
+    private Grid<Pack> createGrid(){
         Grid<Pack> grdMain = new Grid<>(Pack.class, false);
         var strPackNumber = "Nr paczki";
         var strPrice = "Cena";
         var strStatus = "Status";
         grdMain.addColumn(Pack::getNrPaczki).setHeader(strPackNumber).setAutoWidth(true);
         grdMain.addColumn(Pack::getCena).setHeader(strPrice).setAutoWidth(true);
-        grdMain.addColumn(createStatusComponentRenderer()).setHeader(strStatus)
-                .setAutoWidth(true);
+        grdMain.addComponentColumn(pack ->
+                        createStatusBadge(pack.getStatus().toString()))
+                .setHeader(strStatus).setAutoWidth(true);
         return grdMain;
     }
-    private Grid addPacksToGrid(Grid grid, List<Pack> packs) {
+    private Span createStatusBadge(String status) {
+        String theme;
+        switch (status) {
+            case "nadana":
+                theme = "badge primary";
+                break;
+            case "anulowana":
+                theme = "badge error primary";
+                break;
+            case "przypisana":
+                theme = "badge primary";
+                break;
+            case "odebrana":
+                theme = "badge success primary";
+                break;
+            default:
+                theme = "badge contrast primary";
+                break;
+        }
+        Span badge = new Span(status);
+        badge.getElement().getThemeList().add(theme);
+        return badge;
+    }
+    private Grid<Pack> addPacksToGrid(Grid grid, List<Pack> packs) {
         var dialog = createDialog();
 
         if(packs.size()>0)
@@ -122,17 +145,6 @@ public class PackListView extends VerticalLayout implements BeforeEnterObserver 
                 )
         );
         return btn;
-    }
-    private static final SerializableBiConsumer<Span, Pack> statusComponentUpdater = (span, pack) -> {
-        boolean isAvailable = "Nadana".equals(pack.getStatus().toString());
-        String theme = String
-                .format("badge %s", isAvailable ? "success" : "error");
-        span.getElement().setAttribute("theme", theme);
-        span.setText(pack.getStatus().toString());
-    };
-
-    private static ComponentRenderer<Span, Pack> createStatusComponentRenderer() {
-        return new ComponentRenderer<>(Span::new, statusComponentUpdater);
     }
 
 }
